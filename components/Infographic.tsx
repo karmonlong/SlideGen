@@ -4,9 +4,11 @@
 */
 import React, { useState } from 'react';
 import { Presentation, Slide } from '../types';
-import { Download, Maximize2, X, ChevronLeft, ChevronRight, Grid, PlaySquare, FileDown } from 'lucide-react';
+import { Download, Maximize2, X, ChevronLeft, ChevronRight, Grid, PlaySquare, FileDown, Presentation as PresentationIcon } from 'lucide-react';
 // @ts-ignore
 import { jsPDF } from "jspdf";
+// @ts-ignore
+import PptxGenJS from "pptxgenjs";
 
 interface SlideViewerProps {
   presentation: Presentation;
@@ -62,6 +64,37 @@ const SlideViewer: React.FC<SlideViewerProps> = ({ presentation, onReset }) => {
     }
   };
 
+  const exportPPT = async () => {
+    setIsExporting(true);
+    try {
+        const pres = new PptxGenJS();
+        pres.layout = 'LAYOUT_16x9';
+
+        presentation.slides.forEach((slide) => {
+            const pptSlide = pres.addSlide();
+            // Add image covering the whole slide
+            pptSlide.addImage({
+                data: slide.data,
+                x: 0,
+                y: 0,
+                w: "100%",
+                h: "100%"
+            });
+            // Optionally add notes if we have them in the future
+            if (slide.speakerNotes) {
+                pptSlide.addNotes(slide.speakerNotes);
+            }
+        });
+
+        await pres.writeFile({ fileName: `${presentation.topic.replace(/\s+/g, '_')}.pptx` });
+    } catch (e) {
+        console.error("PPT Export Failed", e);
+        alert("PPT 导出失败，请重试");
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center w-full max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-8 duration-700 mt-8 mb-20">
       
@@ -77,10 +110,19 @@ const SlideViewer: React.FC<SlideViewerProps> = ({ presentation, onReset }) => {
          </div>
          <div className="flex gap-2">
             <button 
+                onClick={exportPPT}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs transition-colors shadow-lg shadow-orange-500/20"
+                title="导出 PPT"
+            >
+                {isExporting ? '导出中...' : '导出 PPT'}
+                <PresentationIcon className="w-4 h-4" />
+            </button>
+            <button 
                 onClick={exportPDF}
                 disabled={isExporting}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition-colors shadow-lg shadow-cyan-500/20"
-                title="Download as PDF"
+                title="导出 PDF"
             >
                 {isExporting ? '导出中...' : '导出 PDF'}
                 <FileDown className="w-4 h-4" />
